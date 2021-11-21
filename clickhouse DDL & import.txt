@@ -1,0 +1,31 @@
+--start clickhouse from ubuntu terminal
+
+sudo service clickhouse-server start
+
+clickhouse-client
+
+
+------------- table london bike shares -----------------------
+
+create database test;
+
+create table test.london_bike_share (rental_id Int32, duration Float32, bike_id Float32, end_rental_date_time DateTime, end_station_id Float32, end_station_name String, start_rental_date_time DateTime, start_station_id Float32, start_station_name String) ENGINE = MergeTree() ORDER BY rental_id
+
+-- PK on rental_id / sorting key -> no need for additional index
+
+-- https://clickhouse.com/docs/en/engines/table-engines/mergetree-family/mergetree/ - defaul engine
+
+-- C:\Users\user\AppData\Local\Packages\CanonicalGroupLimited.UbuntuonWindows_79rhkp1fndgsc\LocalState\rootfs\var\lib\clickhouse - csv file location
+
+sudo chmod 777 var/lib/clickhouse/london.csv -- -- change privileges
+
+cat var/lib/clickhouse/london.csv | clickhouse-client --query "INSERT INTO test.london_bike_share FORMAT CSVWithNames"
+
+------------- table london stations -----------------------
+
+CREATE TABLE test.london_stations (station_id Int32, station_name String, longitude Float32, latitude Float32) ENGINE = MergeTree() ORDER BY station_id
+;
+
+sudo chmod 777 var/lib/clickhouse/london_stations.csv -- silnejsi -- zmena privligii
+
+cat var/lib/clickhouse/london_stations.csv | clickhouse-client --query "INSERT INTO test.london_stations FORMAT CSVWithNames"

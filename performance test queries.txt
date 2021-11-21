@@ -1,0 +1,86 @@
+
+/* import data: mysql 1692 sec / clickhouse 70 sec*/
+
+/* count all rows: mysql 27 sec / clickhouse 0.01 sec */
+
+select count(*) from test.london_bike_share;
+
+/* find specific rental_id: mysql 0.00 sec / clickhouse 0.14 sec */
+
+select * from test.london_bike_share
+where rental_id = 61343323;
+
+/* wildcard condition: mysql 97.2 sec / clickhouse 1.4 sec */
+
+select count(*) from test.london_bike_share
+where UPPER(start_station_name) like '%HYDE PARK%';
+
+/*avg duration: mysql 38.0 sec / clickhouse  0.14 sec */
+select avg(duration) 
+from test.london_bike_share t
+where t.duration > 0;
+
+/*agg bike_id: mysql 63.75  sec / clickhouse  0.76 sec */
+
+select t.bike_id, count(*)
+from test.london_bike_share t
+group by t.bike_id
+having count(*) > 10000
+order by 2 desc
+;
+
+/* CTE - most famous route: mysql - RUN OUT of temporary tablespace / clickhouse   7.8 sec */
+
+/*mysql*/
+
+with temp as (
+select concat(start_station_name, " - ", end_station_name) as route
+from test.london_bike_share t
+)
+select count(*), route from temp
+group by route
+order by 1 desc
+limit 100;
+
+/*clickhouse*/
+
+with temp as (
+select start_station_name || ' - ' || end_station_name as route
+from test.london_bike_share t
+)
+select count(*), route from temp
+group by route
+order by count(*) desc
+limit 10;
+
+;
+
+/* test join + group by: mysql RUN OUT of temporary tablespace / clickhouse   2.4 sec */
+select ls.station_name, count(*) from
+test.london_bike_share t
+join test.london_stations ls on ls.station_id = t.start_station_id
+group by ls.station_name
+order by 2 desc
+;
+
+
+
+
+/* update 1.3 mil rows: mysql 46.2 sec / clickhouse   0,018 sec*/
+
+/*mysql*/
+update test.london_bike_share t
+set t.start_station_name = t.end_station_name
+where t.rental_id > 100000000
+;
+
+/*clickhouse*/
+alter table test.london_bike_share 
+update start_station_name = end_station_name
+where rental_id > 100000000;
+
+/*window function: mysql 297 sec / clickhouse    9.9 sec*/
+
+select t.start_station_name, avg(t.duration) over (partition by t.start_station_name)
+from test.london_bike_share t
+limit 1000;
